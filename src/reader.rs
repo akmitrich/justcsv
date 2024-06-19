@@ -1,5 +1,7 @@
 use std::io::BufRead;
 
+use crate::parse;
+
 pub struct CsvReader<R> {
     source: std::io::Lines<R>,
 }
@@ -12,7 +14,7 @@ impl<R: BufRead> CsvReader<R> {
 
     pub fn next_row(&mut self) -> crate::Result<Vec<String>> {
         let line = self.source.next().ok_or(crate::Error::Eof)??;
-        todo!()
+        Ok(parse::record(&line).map_err(|e| format!("{}", e))?.1)
     }
 }
 
