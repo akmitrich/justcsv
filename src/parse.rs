@@ -16,7 +16,7 @@ where
     }
 }
 
-pub fn escaped(dquote: char) -> impl FnMut(&str) -> ParseResult<&str> {
+pub fn escaped(comma: char, dquote: char) -> impl FnMut(&str) -> ParseResult<&str> {
     move |src| {
         let rest = src.trim_start();
         let (rest, _) = tag(format!("{}", dquote).as_str())(rest)?;
@@ -24,7 +24,17 @@ pub fn escaped(dquote: char) -> impl FnMut(&str) -> ParseResult<&str> {
         while let Some((i, c)) = char_indices.next() {
             if c == dquote {
                 match char_indices.peek().copied() {
-                    Some((j, c)) if c != dquote => return Ok((rest[j..].trim_start(), &rest[..i])),
+                    Some((j, c)) if c != dquote => {
+                        let remainder = rest[j..].trim_start();
+                        if remainder.starts_with(comma) {
+                            return Ok((remainder, &rest[..i]));
+                        } else {
+                            return Err(nom::Err::Failure(nom::error::make_error(
+                                src,
+                                nom::error::ErrorKind::Fail,
+                            )));
+                        }
+                    }
                     None => return Ok(("", &rest[..i])),
                     _ => {
                         let _ = char_indices.next();
@@ -39,7 +49,7 @@ pub fn escaped(dquote: char) -> impl FnMut(&str) -> ParseResult<&str> {
 pub fn field<'a>(comma: char, dquote: char) -> impl FnMut(&'a str) -> ParseResult<String> {
     let stop = move |c| (c < ' ' || c == comma || c == dquote);
     nom::combinator::map(
-        nom::branch::alt((escaped(dquote), textdata(stop))),
+        nom::branch::alt((escaped(comma, dquote), textdata(stop))),
         |field| field.replace("\"\"", "\""),
     )
 }
@@ -63,7 +73,7 @@ mod tests {
 
     #[test]
     fn parse_with_escaped() {
-        let line = "мама, \"мыла\" ,раму";
+        let line = "мама, \"мыла\",раму";
         assert_eq!(
             vec!["мама", "мыла", "раму"],
             record(line, ',', '"').unwrap().1
