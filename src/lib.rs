@@ -3,7 +3,7 @@ mod parse;
 mod reader;
 
 pub use error::{Error, Result};
-pub use reader::CsvReader;
+pub use reader::{Config as CsvReaderConfig, CsvReader};
 
 #[cfg(test)]
 mod tests {
@@ -13,8 +13,8 @@ mod tests {
     fn reader_works() {
         let buf = "1,2,3\n4,5,6".as_bytes();
         let mut reader = reader::CsvReader::new(buf);
-        assert_eq!(vec!["1", "2", "3"], reader.next().unwrap());
-        assert_eq!(vec!["4", "5", "6"], reader.next().unwrap());
+        assert_eq!(vec!["1", "2", "3"], reader.next().unwrap().unwrap());
+        assert_eq!(vec!["4", "5", "6"], reader.next().unwrap().unwrap());
         assert!(reader.next().is_none())
     }
 
@@ -29,8 +29,8 @@ mod tests {
     fn escaped_read() {
         let buf = "\"1\",2,3\r\n4, \"5\",6".as_bytes();
         let mut reader = reader::CsvReader::new(buf);
-        assert_eq!(vec!["1", "2", "3"], reader.next().unwrap());
-        assert_eq!(vec!["4", "5", "6"], reader.next().unwrap());
+        assert_eq!(vec!["1", "2", "3"], reader.next().unwrap().unwrap());
+        assert_eq!(vec!["4", "5", "6"], reader.next().unwrap().unwrap());
         assert!(reader.next().is_none())
     }
 
@@ -38,13 +38,22 @@ mod tests {
     fn multiline_read() {
         let buf = "\"1\",2,3\r\n4, \"everybody needs\nmilk\",6".as_bytes();
         let mut reader = reader::CsvReader::new(buf);
-        // println!("Line 1: {:?}", reader.next_row());
-        // println!("Line 2: {:?}", reader.next_row());
-        assert_eq!(vec!["1", "2", "3"], reader.next().unwrap());
+        assert_eq!(vec!["1", "2", "3"], reader.next().unwrap().unwrap());
         assert_eq!(
             vec!["4", "everybody needs\nmilk", "6"],
-            reader.next().unwrap()
+            reader.next().unwrap().unwrap()
         );
+        assert!(reader.next().is_none())
+    }
+
+    #[test]
+    fn quoted_read_fail() {
+        let buf = "\"1\",2,3\r\n4, \"everybody needs\nmilk,6\r\nsome other stuff which is never read".as_bytes();
+        let mut reader = reader::CsvReader::new(buf);
+        // println!("Line 1: {:?}", reader.next());
+        // println!("Line 2: {:?}", reader.next());
+        assert_eq!(vec!["1", "2", "3"], reader.next().unwrap().unwrap());
+        assert!(reader.next().unwrap().is_err());
         assert!(reader.next().is_none())
     }
 }

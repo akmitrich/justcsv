@@ -23,10 +23,8 @@ pub fn escaped(dquote: char) -> impl FnMut(&str) -> ParseResult<&str> {
         let mut char_indices = rest.char_indices().peekable();
         while let Some((i, c)) = char_indices.next() {
             if c == dquote {
-                match char_indices.peek() {
-                    Some((j, c)) if *c != dquote => {
-                        return Ok((rest[*j..].trim_start(), &rest[..i]))
-                    }
+                match char_indices.peek().copied() {
+                    Some((j, c)) if c != dquote => return Ok((rest[j..].trim_start(), &rest[..i])),
                     None => return Ok(("", &rest[..i])),
                     _ => {
                         let _ = char_indices.next();
@@ -34,48 +32,50 @@ pub fn escaped(dquote: char) -> impl FnMut(&str) -> ParseResult<&str> {
                 }
             }
         }
-
         Err(nom::Err::Incomplete(nom::Needed::Unknown))
     }
 }
 
 pub fn field<'a>(comma: char, dquote: char) -> impl FnMut(&'a str) -> ParseResult<String> {
     let stop = move |c| (c < ' ' || c == comma || c == dquote);
-    nom::combinator::map(nom::branch::alt((escaped(dquote), textdata(stop))), |x| {
-        x.replace("\"\"", "\"")
-    })
+    nom::combinator::map(
+        nom::branch::alt((escaped(dquote), textdata(stop))),
+        |field| field.replace("\"\"", "\""),
+    )
 }
 
-pub fn record(src: &str) -> ParseResult<Vec<String>> {
-    separated_list1(tag(","), field(',', '"'))(src)
+pub fn record(src: &str, comma: char, dquote: char) -> ParseResult<Vec<String>> {
+    separated_list1(tag(format!("{}", comma).as_str()), field(comma, dquote))(src)
 }
 
 #[cfg(test)]
 mod tests {
-    use std::io::BufRead;
-
     use super::*;
-
-    #[test]
-    fn it_works() {
-        dbg!("1,2,3\r\n4, \"5\",6".as_bytes().lines().collect::<Vec<_>>());
-    }
 
     #[test]
     fn parse_just_record() {
         let line = "мама,мыла,раму\r\n";
-        assert_eq!(vec!["мама", "мыла", "раму"], record(line).unwrap().1);
+        assert_eq!(
+            vec!["мама", "мыла", "раму"],
+            record(line, ',', '"').unwrap().1
+        );
     }
 
     #[test]
     fn parse_with_escaped() {
         let line = "мама, \"мыла\" ,раму";
-        assert_eq!(vec!["мама", "мыла", "раму"], record(line).unwrap().1);
+        assert_eq!(
+            vec!["мама", "мыла", "раму"],
+            record(line, ',', '"').unwrap().1
+        );
     }
 
     #[test]
     fn parse_multiline() {
         let line = "мама, \"мыла\ntwo times\"\t\t,раму";
-        assert_eq!(vec!["мама", "мыла\ntwo times", "раму"], record(line).unwrap().1);
+        assert_eq!(
+            vec!["мама", "мыла\ntwo times", "раму"],
+            record(line, ',', '"').unwrap().1
+        );
     }
 }

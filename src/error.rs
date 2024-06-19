@@ -6,14 +6,15 @@ pub type Result<T> = core::result::Result<T, Error>;
 pub enum Error {
     #[from]
     Custom(String),
-
     // -- Externals
     #[from]
     Io(std::io::Error),
     #[from]
     Nom(nom::error::Error<&'static str>),
     // -- Internals
-    Eof,
+    StreamComplete,
+    UnexpectedEof,
+    NomFailed(String),
 }
 
 impl Error {
