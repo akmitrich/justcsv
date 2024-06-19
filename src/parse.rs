@@ -35,10 +35,7 @@ pub fn escaped(dquote: char) -> impl FnMut(&str) -> ParseResult<&str> {
             }
         }
 
-        Err(nom::Err::Error(nom::error::make_error(
-            src,
-            nom::error::ErrorKind::Fail,
-        )))
+        Err(nom::Err::Incomplete(nom::Needed::Unknown))
     }
 }
 
@@ -55,11 +52,13 @@ pub fn record(src: &str) -> ParseResult<Vec<String>> {
 
 #[cfg(test)]
 mod tests {
+    use std::io::BufRead;
+
     use super::*;
 
     #[test]
     fn it_works() {
-        dbg!(escaped('"')("\"src\""));
+        dbg!("1,2,3\r\n4, \"5\",6".as_bytes().lines().collect::<Vec<_>>());
     }
 
     #[test]
@@ -70,7 +69,13 @@ mod tests {
 
     #[test]
     fn parse_with_escaped() {
-        let line = "мама,\"мыла\",раму";
+        let line = "мама, \"мыла\" ,раму";
         assert_eq!(vec!["мама", "мыла", "раму"], record(line).unwrap().1);
+    }
+
+    #[test]
+    fn parse_multiline() {
+        let line = "мама, \"мыла\ntwo times\"\t\t,раму";
+        assert_eq!(vec!["мама", "мыла\ntwo times", "раму"], record(line).unwrap().1);
     }
 }

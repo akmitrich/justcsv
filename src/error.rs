@@ -10,6 +10,8 @@ pub enum Error {
     // -- Externals
     #[from]
     Io(std::io::Error),
+    #[from]
+    Nom(nom::error::Error<&'static str>),
     // -- Internals
     Eof,
 }
