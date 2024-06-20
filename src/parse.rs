@@ -26,7 +26,8 @@ pub fn escaped(comma: char, dquote: char) -> impl FnMut(&str) -> ParseResult<&st
                 match char_indices.peek().copied() {
                     Some((j, c)) if c != dquote => {
                         let remainder = rest[j..].trim_start();
-                        if remainder.starts_with(comma) {
+                        let next_byte = remainder.as_bytes().first().copied();
+                        if remainder.starts_with(comma) || next_byte.unwrap_or_default() < 0x20 {
                             return Ok((remainder, &rest[..i]));
                         } else {
                             return Err(nom::Err::Failure(nom::error::make_error(

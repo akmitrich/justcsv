@@ -106,4 +106,19 @@ mod tests {
             reader.next().unwrap().unwrap().into_vec()
         )
     }
+
+    #[test]
+    fn read_headers() {
+        let buf = "Col 1,Col 2, \"Col 3\"\r\n1,2,3\r\n4,\"5\",6".as_bytes();
+        let mut reader = reader::CsvReader::with_config(
+            buf,
+            CsvReaderConfig {
+                has_headers: true,
+                ..Default::default()
+            },
+        );
+        println!("Headers: {:?}", reader.headers());
+        println!("Line 1: {:?}", reader.next());
+        println!("Line 2: {:?}", reader.next());
+    }
 }
