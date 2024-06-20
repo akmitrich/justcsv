@@ -6,6 +6,7 @@ pub use config::Config;
 pub struct CsvReader<R> {
     source: R,
     config: Config,
+    headers: Option<Box<[String]>>,
 }
 
 impl<R: BufRead> CsvReader<R> {
@@ -13,38 +14,31 @@ impl<R: BufRead> CsvReader<R> {
         Self::with_config(source, Default::default())
     }
 
-    pub fn with_config(source: R, config: Config) -> Self {
-        Self { source, config }
+    pub fn with_config(mut source: R, config: Config) -> Self {
+        let headers = if config.has_headers {
+            // if parsing headers fails self.headers==None but self.config.has_headers is still true
+            load_headers(&mut source, config.separator, config.escape)
+        } else {
+            None
+        };
+        Self {
+            source,
+            config,
+            headers,
+        }
     }
 
-    pub fn next_row(&mut self) -> crate::Result<Vec<String>> {
-        let mut line = String::new();
-        loop {
-            let n = self.source.read_line(&mut line)?;
-            if n == 0 {
-                if line.is_empty() {
-                    break Err(crate::Error::StreamComplete);
-                } else {
-                    break Err(crate::Error::UnexpectedEof);
-                }
-            }
-            match parse::record(&line, self.config.separator, self.config.escape) {
-                Ok((_, fields)) => break Ok(fields),
-                Err(e) => match e {
-                    nom::Err::Incomplete(_) => {
-                        continue;
-                    }
-                    nom::Err::Error(e) | nom::Err::Failure(e) => {
-                        break Err(crate::Error::NomFailed(format!("Nom failed: {}", e)))
-                    }
-                },
-            }
-        }
+    pub fn headers(&self) -> Option<&[String]> {
+        self.headers.as_deref()
+    }
+
+    fn next_row(&mut self) -> crate::Result<Box<[String]>> {
+        parse_row(&mut self.source, self.config.separator, self.config.escape)
     }
 }
 
 impl<R: BufRead> Iterator for CsvReader<R> {
-    type Item = crate::Result<Vec<String>>;
+    type Item = crate::Result<Box<[String]>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let row = self.next_row();
@@ -53,6 +47,41 @@ impl<R: BufRead> Iterator for CsvReader<R> {
         }
         Some(row)
     }
+}
+
+fn parse_row<R: BufRead>(
+    source: &mut R,
+    comma: char,
+    dquote: char,
+) -> crate::Result<Box<[String]>> {
+    let mut record_line = String::new();
+    loop {
+        let n = source.read_line(&mut record_line)?;
+        if n == 0 {
+            if record_line.is_empty() {
+                break Err(crate::Error::StreamComplete);
+            } else {
+                // if source exhausted but we have incomplete record parsing fails
+                break Err(crate::Error::UnexpectedEof);
+            }
+        }
+        match parse::record(&record_line, comma, dquote) {
+            Ok((_, fields)) => break Ok(fields.into_boxed_slice()),
+            Err(e) => match e {
+                nom::Err::Incomplete(_) => {
+                    //record in CSV-file may consist of several lines if has escaped fields with newlines inside
+                    continue;
+                }
+                nom::Err::Error(e) | nom::Err::Failure(e) => {
+                    break Err(crate::Error::NomFailed(format!("Nom failed: {}", e)))
+                }
+            },
+        }
+    }
+}
+
+fn load_headers<R: BufRead>(source: &mut R, comma: char, dquote: char) -> Option<Box<[String]>> {
+    parse_row(source, comma, dquote).ok()
 }
 
 mod config {
