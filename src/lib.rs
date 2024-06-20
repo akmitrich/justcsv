@@ -5,7 +5,7 @@ mod writer;
 
 pub use error::{Error, Result};
 pub use reader::{CsvReader, CsvReaderConfig};
-pub use writer::{CsvWriter, CsvWriterConfig};
+pub use writer::{CsvWriter, CsvWriterConfig, NewLine};
 
 #[cfg(test)]
 mod tests {

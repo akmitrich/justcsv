@@ -1,4 +1,5 @@
-pub use config::Config as CsvWriterConfig;
+pub use config::{Config as CsvWriterConfig, NewLine};
+
 use std::io::Write;
 
 pub struct CsvWriter<W> {
