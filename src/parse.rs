@@ -2,7 +2,7 @@ use nom::{bytes::complete::tag, multi::separated_list1};
 
 pub type ParseResult<'a, T> = nom::IResult<&'a str, T>;
 
-pub fn textdata<F>(stop: F) -> impl FnMut(&str) -> ParseResult<&str>
+fn textdata<F>(stop: F) -> impl FnMut(&str) -> ParseResult<&str>
 where
     F: Fn(char) -> bool,
 {
@@ -16,7 +16,7 @@ where
     }
 }
 
-pub fn escaped(comma: char, dquote: char) -> impl FnMut(&str) -> ParseResult<&str> {
+fn escaped(comma: char, dquote: char) -> impl FnMut(&str) -> ParseResult<&str> {
     move |src| {
         let rest = src.trim_start();
         let (rest, _) = tag(format!("{}", dquote).as_str())(rest)?;
@@ -47,7 +47,7 @@ pub fn escaped(comma: char, dquote: char) -> impl FnMut(&str) -> ParseResult<&st
     }
 }
 
-pub fn field<'a>(comma: char, dquote: char) -> impl FnMut(&'a str) -> ParseResult<String> {
+fn field<'a>(comma: char, dquote: char) -> impl FnMut(&'a str) -> ParseResult<String> {
     let stop = move |c| (c < ' ' || c == comma || c == dquote);
     nom::combinator::map(
         nom::branch::alt((escaped(comma, dquote), textdata(stop))),
@@ -87,6 +87,17 @@ mod tests {
         assert_eq!(
             vec!["мама", "мыла\ntwo times", "раму"],
             record(line, ',', '"').unwrap().1
+        );
+    }
+
+    #[test]
+    fn fail_after_dquote() {
+        let comma = ',';
+        let dquote = '"';
+        assert!(record("мама,мыла, \"раму\"abc", comma, dquote).is_err());
+        assert_eq!(
+            vec!["мама", "мыла", "раму"],
+            record("мама,\"мыла\", \"раму\" ", comma, dquote).unwrap().1
         );
     }
 }

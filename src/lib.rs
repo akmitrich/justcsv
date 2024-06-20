@@ -117,8 +117,17 @@ mod tests {
                 ..Default::default()
             },
         );
-        println!("Headers: {:?}", reader.headers());
-        println!("Line 1: {:?}", reader.next());
-        println!("Line 2: {:?}", reader.next());
+        assert_eq!(
+            vec!["Col 1", "Col 2", "Col 3"],
+            reader.headers().unwrap().to_vec()
+        );
+        assert_eq!(
+            vec!["1", "2", "3"],
+            reader.next().unwrap().unwrap().into_vec()
+        );
+        assert_eq!(
+            vec!["4", "5", "6"],
+            reader.next().unwrap().unwrap().into_vec()
+        );
     }
 }
