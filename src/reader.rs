@@ -1,11 +1,11 @@
 use crate::parse;
 use std::io::BufRead;
 
-pub use config::Config;
+pub use config::Config as CsvReaderConfig;
 
 pub struct CsvReader<R> {
     source: R,
-    config: Config,
+    config: CsvReaderConfig,
     headers: Option<Box<[String]>>,
 }
 
@@ -14,9 +14,9 @@ impl<R: BufRead> CsvReader<R> {
         Self::with_config(source, Default::default())
     }
 
-    pub fn with_config(mut source: R, config: Config) -> Self {
+    pub fn with_config(mut source: R, config: CsvReaderConfig) -> Self {
         let headers = if config.has_headers {
-            // if parsing headers fails self.headers==None but self.config.has_headers is still true
+            // if parsing headers fails self.headers is None but self.config.has_headers is still true
             load_headers(&mut source, config.separator, config.escape)
         } else {
             None

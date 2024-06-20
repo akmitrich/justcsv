@@ -1,9 +1,11 @@
 mod error;
 mod parse;
 mod reader;
+mod writer;
 
 pub use error::{Error, Result};
-pub use reader::{Config as CsvReaderConfig, CsvReader};
+pub use reader::{CsvReader, CsvReaderConfig};
+pub use writer::{CsvWriter, CsvWriterConfig};
 
 #[cfg(test)]
 mod tests {
@@ -94,8 +96,6 @@ mod tests {
     fn read_bad_escaping() {
         let buf = "1,2,3\r\n4,\"5\"xyz,6\r\n\"7\",8,9".as_bytes();
         let mut reader = reader::CsvReader::new(buf);
-        // println!("Line 1: {:?}", reader.next());
-        // println!("Line 2: {:?}", reader.next());
         assert_eq!(
             vec!["1", "2", "3"],
             reader.next().unwrap().unwrap().into_vec()
@@ -130,4 +130,20 @@ mod tests {
             reader.next().unwrap().unwrap().into_vec()
         );
     }
+
+    #[test]
+    fn writer_works() {
+        let mut buf = Vec::new();
+        let row = vec!["1", "2", "3"];
+        let mut writer = CsvWriter::new(&mut buf);
+        writer.write_row(&row).unwrap();
+        writer.write_row(&["4", "5\"abc\"X", "6\n\tagain"]).unwrap();
+        assert_eq!(
+            b"1,2,3\r\n4,\"5\"\"abc\"\"X\",\"6\n\tagain\"",
+            buf.as_slice()
+        );
+        println!("CSV: {}", String::from_utf8(buf).unwrap());
+    }
 }
+// println!("Line 1: {:?}", reader.next());
+// println!("Line 2: {:?}", reader.next());
