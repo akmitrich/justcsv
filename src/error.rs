@@ -14,6 +14,7 @@ pub enum Error {
     // -- Internals
     StreamComplete,
     UnexpectedEof,
+    WriteHeadersAfterRecords,
     NomFailed(String),
 }
 

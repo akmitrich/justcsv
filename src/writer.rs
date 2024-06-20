@@ -37,6 +37,9 @@ impl<W: Write> CsvWriter<W> {
     }
 
     pub fn headers(&mut self, headers: &[impl AsRef<str>]) -> crate::Result<()> {
+        if self.is_dirty {
+            return Err(crate::Error::WriteHeadersAfterRecords);
+        }
         self.write_row(headers)
     }
 
@@ -90,6 +93,37 @@ mod config {
         pub separator: char,
         pub escape: char,
         pub newline: NewLine,
+    }
+
+    impl Config {
+        pub fn new() -> Self {
+            Default::default()
+        }
+
+        pub fn separator(mut self, comma: char) -> Self {
+            self.separator = comma;
+            self
+        }
+
+        pub fn escape(mut self, dquote: char) -> Self {
+            self.escape = dquote;
+            self
+        }
+
+        pub fn rfc_end_of_line(mut self) -> Self {
+            self.newline = NewLine::Rfc;
+            self
+        }
+
+        pub fn unix_end_of_line(mut self) -> Self {
+            self.newline = NewLine::Unix;
+            self
+        }
+
+        pub fn custom_end_of_line(mut self, eoln: impl ToString) -> Self {
+            self.newline = NewLine::Custom(eoln.to_string());
+            self
+        }
     }
 
     impl Default for Config {
