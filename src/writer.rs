@@ -29,7 +29,7 @@ impl<W: Write> CsvWriter<W> {
         }
         let output = row
             .iter()
-            .map(|x| self.escape_if_needed(x.as_ref()))
+            .map(|field| self.escape_if_needed(field.as_ref()))
             .collect::<Vec<_>>()
             .join(",");
         write!(self.dest, "{}", output)?;

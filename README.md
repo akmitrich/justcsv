@@ -1,7 +1,7 @@
 # Just CSV reader/writer
 Inspired by [`csv_simple`](https://github.com/daramos/simple_csv) crate.
 
-Conforms the [RFC 4180](https://datatracker.ietf.org/doc/html/rfc4180). Please be aware of that RFC.
+Conforms the [RFC 4180](https://datatracker.ietf.org/doc/html/rfc4180). Please be aware of that RFC. According to RFC CSV-file is ASCII-only, this crate treat CSV-file as UTF-8.
 
 ## Reader API
 ```rust
