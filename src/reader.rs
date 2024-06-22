@@ -49,11 +49,7 @@ impl<R: BufRead> Iterator for CsvReader<R> {
     }
 }
 
-fn parse_row<R: BufRead>(
-    source: &mut R,
-    comma: char,
-    dquote: char,
-) -> crate::Result<Box<[String]>> {
+fn parse_row<R: BufRead>(mut source: R, comma: char, dquote: char) -> crate::Result<Box<[String]>> {
     let mut record_line = String::new();
     loop {
         let n = source.read_line(&mut record_line)?;
@@ -80,7 +76,7 @@ fn parse_row<R: BufRead>(
     }
 }
 
-fn load_headers<R: BufRead>(source: &mut R, comma: char, dquote: char) -> Option<Box<[String]>> {
+fn load_headers<R: BufRead>(source: R, comma: char, dquote: char) -> Option<Box<[String]>> {
     parse_row(source, comma, dquote).ok()
 }
 

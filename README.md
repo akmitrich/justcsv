@@ -55,3 +55,6 @@ pub enum NewLine {
 }
 ```
 Config struct exported as `CsvWriterConfig` in `lib.rs` implements builder pattern and Default trait.
+
+# License
+Due to [nom](https://github.com/rust-bakery/nom) the crate has [MIT License](LICENSE).
