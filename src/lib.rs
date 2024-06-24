@@ -137,7 +137,7 @@ mod tests {
         let row = vec!["1", "2", "3"];
         let mut writer = CsvWriter::new(&mut buf);
         writer.write_row(&row).unwrap();
-        writer.write_row(&["4", "5\"abc\"X", "6\n\tagain"]).unwrap();
+        writer.write_row(["4", "5\"abc\"X", "6\n\tagain"]).unwrap();
         assert_eq!(
             b"1,2,3\r\n4,\"5\"\"abc\"\"X\",\"6\n\tagain\"",
             buf.as_slice()

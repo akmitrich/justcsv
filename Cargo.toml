@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Alexander Kalashnikov"]
 description = "Simple CSV-file reader/writer"
+license = "MIT OR Apache-2.0"
+homepage = "https://github.com/akmitrich/justcsv"
+repository = "https://github.com/akmitrich/justcsv"
+readme = "README.md"
 
 [dependencies]
 derive_more = { version = "1.0.0-beta.6", features = ["from"] }

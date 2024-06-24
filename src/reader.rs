@@ -3,6 +3,20 @@ use std::io::BufRead;
 
 pub use config::Config as CsvReaderConfig;
 
+/// CSV reader for UTF-8 comma separated content.
+/// Use it as an iterator to read records line by line.
+///
+/// # Example
+///
+/// ```
+/// let input = std::fs::File::open(path)?;
+/// let buf = std::io::BufReader::new(input);
+/// let reader = CsvReader::new(buf);
+/// for (line, record) in reader.enumerate() {
+///     let record = record?;
+///     println!("{:4}. {:?}", line, record);
+/// }
+/// ```
 pub struct CsvReader<R> {
     source: R,
     config: CsvReaderConfig,
@@ -10,10 +24,12 @@ pub struct CsvReader<R> {
 }
 
 impl<R: BufRead> CsvReader<R> {
+    /// Create reader with default options
     pub fn new(source: R) -> Self {
         Self::with_config(source, Default::default())
     }
 
+    /// Create reader with options passed as [config](CsvReaderConfig)
     pub fn with_config(mut source: R, config: CsvReaderConfig) -> Self {
         let headers = if config.has_headers {
             // if parsing headers fails self.headers is None but self.config.has_headers is still true
@@ -28,6 +44,7 @@ impl<R: BufRead> CsvReader<R> {
         }
     }
 
+    /// Returns CSV headers if they are expected for the stream
     pub fn headers(&self) -> Option<&[String]> {
         self.headers.as_deref()
     }
@@ -81,22 +98,31 @@ fn load_headers<R: BufRead>(source: R, comma: char, dquote: char) -> Option<Box<
 }
 
 mod config {
+
+    /// Data structure with CSV reader options
     pub struct Config {
+        /// User expects CSV headers
         pub has_headers: bool,
+        /// Value separator, default is ',' as in RFC 4180
         pub separator: char,
+        /// Escape character, default is '"' as in RFC 4180
         pub escape: char,
     }
 
     impl Config {
+        /// Part of a Builder pattern. Sets headers flag
         pub fn has_headers(mut self, has: bool) -> Self {
             self.has_headers = has;
             self
         }
 
+        /// Part of a Builder pattern. Sets custom separator value
         pub fn separator(mut self, sep: char) -> Self {
             self.separator = sep;
             self
         }
+
+        /// Part of a Builder pattern. Sets custom escape character value
         pub fn escape(mut self, esc: char) -> Self {
             self.escape = esc;
             self

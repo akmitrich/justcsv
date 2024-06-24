@@ -2,6 +2,23 @@ pub use config::{Config as CsvWriterConfig, NewLine};
 
 use std::io::Write;
 
+/// CSV writer to save UTF-8 content as comma separated values.
+/// Basically CSV document is a slice of records which are basically `&str` slices.
+///
+/// # Examples
+///
+/// ```
+/// for x in 0..u16::MAX {
+///     writer.write_row(&[format!("{x}"), format!("{log}", log = (x as f64).ln())])?;
+/// }
+/// ```
+///
+/// ```
+/// let data = (0..u16::MAX)
+///     .map(|x| vec![format!("{x}"), format!("{log}", log = (x as f64).log2())])
+///     .collect::<Vec<_>>();
+/// writer.write_document(data.as_slice())?;
+/// ```
 pub struct CsvWriter<W> {
     dest: W,
     config: CsvWriterConfig,
@@ -9,10 +26,12 @@ pub struct CsvWriter<W> {
 }
 
 impl<W: Write> CsvWriter<W> {
+    /// Creates a CSV writer with default options
     pub fn new(dest: W) -> Self {
         Self::with_config(dest, Default::default())
     }
 
+    /// Creates a CSV writer with options passed as [config](CsvWriterConfig)
     pub fn with_config(dest: W, config: CsvWriterConfig) -> Self {
         Self {
             dest,
@@ -21,34 +40,38 @@ impl<W: Write> CsvWriter<W> {
         }
     }
 
-    pub fn write_row(&mut self, row: &[impl AsRef<str>]) -> crate::Result<()> {
+    /// Save next row of comma separated values
+    pub fn write_row<Field: AsRef<str>>(&mut self, row: impl AsRef<[Field]>) -> crate::Result<()> {
         if self.is_dirty {
             write!(self.dest, "{}", self.config.newline)?;
         } else {
             self.is_dirty = true;
         }
         let output = row
+            .as_ref()
             .iter()
             .map(|field| self.escape_if_needed(field.as_ref()))
             .collect::<Vec<_>>()
-            .join(",");
+            .join(self.config.separator.to_string().as_str());
         write!(self.dest, "{}", output)?;
         Ok(())
     }
 
-    pub fn headers(&mut self, headers: &[impl AsRef<str>]) -> crate::Result<()> {
+    /// Save CSV headers. Basically the same as `write_row` but returns error if headers are saved after any records
+    pub fn write_headers(&mut self, headers: &[impl AsRef<str>]) -> crate::Result<()> {
         if self.is_dirty {
             return Err(crate::Error::WriteHeadersAfterRecords);
         }
         self.write_row(headers)
     }
 
+    /// Save whole CSV document
     pub fn write_document<Field: AsRef<str>, Record: AsRef<[Field]>>(
         &mut self,
         doc: &[Record],
     ) -> crate::Result<()> {
         for row in doc.iter() {
-            self.write_row(row.as_ref())?;
+            self.write_row(row)?;
         }
         Ok(())
     }
@@ -56,7 +79,7 @@ impl<W: Write> CsvWriter<W> {
     fn escape_if_needed(&self, field: &str) -> String {
         if field
             .chars()
-            .any(|c| c < ' ' || c == self.config.separator || c == self.config.escape)
+            .any(|c| c < ' ' || self.config.separator.contains(c) || c == self.config.escape)
         {
             format!(
                 "\"{}\"",
@@ -72,9 +95,13 @@ impl<W: Write> CsvWriter<W> {
 }
 
 mod config {
+    /// New line type
     pub enum NewLine {
+        /// According RFC 4180 `CRLF`
         Rfc,
+        /// Unix style option: '\n'
         Unix,
+        /// Custom end of line characters
         Custom(String),
     }
 
@@ -92,37 +119,47 @@ mod config {
         }
     }
 
+    /// Data struct with CSV writer options
     pub struct Config {
-        pub separator: char,
+        /// Value separator, default is ','
+        pub separator: String,
+        /// Escape character, default is '"'
         pub escape: char,
+        /// New line type
         pub newline: NewLine,
     }
 
     impl Config {
+        /// Create config with default options
         pub fn new() -> Self {
             Default::default()
         }
 
+        /// Part of Builder pattern. Sets custom value separator
         pub fn separator(mut self, comma: char) -> Self {
-            self.separator = comma;
+            self.separator = comma.to_string();
             self
         }
 
+        /// Part of Builder pattern. Sets custom escape character instead of '"'
         pub fn escape(mut self, dquote: char) -> Self {
             self.escape = dquote;
             self
         }
 
+        /// Part of Builder pattern. Sets end of line according RFC 4180 (default value)
         pub fn rfc_end_of_line(mut self) -> Self {
             self.newline = NewLine::Rfc;
             self
         }
 
+        /// Part of Builder pattern. Sets end of line in Unix style, i.e. '\n'
         pub fn unix_end_of_line(mut self) -> Self {
             self.newline = NewLine::Unix;
             self
         }
 
+        /// Part of Builder pattern. Sets custom end of line
         pub fn custom_end_of_line(mut self, eoln: impl ToString) -> Self {
             self.newline = NewLine::Custom(eoln.to_string());
             self
@@ -132,7 +169,7 @@ mod config {
     impl Default for Config {
         fn default() -> Self {
             Self {
-                separator: ',',
+                separator: String::from(","),
                 escape: '"',
                 newline: NewLine::Rfc,
             }

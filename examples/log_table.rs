@@ -2,7 +2,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let headers = ["x", "log(x)"];
     let mut table = vec![];
     let mut writer = justcsv::CsvWriter::new(&mut table);
-    writer.headers(&headers)?;
+    writer.write_headers(&headers)?;
     if std::env::args().nth(1).is_some() {
         log2(&mut writer)?;
     } else {
