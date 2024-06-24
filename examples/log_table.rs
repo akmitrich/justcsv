@@ -20,9 +20,8 @@ fn natural_log<W: std::io::Write>(writer: &mut justcsv::CsvWriter<W>) -> justcsv
 }
 
 fn log2<W: std::io::Write>(writer: &mut justcsv::CsvWriter<W>) -> justcsv::Result<()> {
-    writer.write_document(
-        &(0..u16::MAX)
-            .map(|x| [format!("{x}"), format!("{log}", log = (x as f64).log2())])
-            .collect::<Vec<_>>(),
-    )
+    let data = (0..u16::MAX)
+        .map(|x| vec![format!("{x}"), format!("{log}", log = (x as f64).log2())])
+        .collect::<Vec<_>>();
+    writer.write_document(data.as_slice())
 }

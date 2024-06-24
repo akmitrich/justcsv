@@ -43,12 +43,12 @@ impl<W: Write> CsvWriter<W> {
         self.write_row(headers)
     }
 
-    pub fn write_document<const N: usize>(
+    pub fn write_document<Field: AsRef<str>, Record: AsRef<[Field]>>(
         &mut self,
-        doc: &[[impl AsRef<str>; N]],
+        doc: &[Record],
     ) -> crate::Result<()> {
         for row in doc.iter() {
-            self.write_row(row)?;
+            self.write_row(row.as_ref())?;
         }
         Ok(())
     }
