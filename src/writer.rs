@@ -5,19 +5,18 @@ use std::io::Write;
 /// CSV writer to save UTF-8 content as comma separated values.
 /// Basically CSV document is a slice of records which are basically `&str` slices.
 ///
-/// # Examples
+/// # Example
 ///
 /// ```
-/// for x in 0..u16::MAX {
-///     writer.write_row(&[format!("{x}"), format!("{log}", log = (x as f64).ln())])?;
-/// }
-/// ```
-///
-/// ```
-/// let data = (0..u16::MAX)
-///     .map(|x| vec![format!("{x}"), format!("{log}", log = (x as f64).log2())])
-///     .collect::<Vec<_>>();
-/// writer.write_document(data.as_slice())?;
+/// let mut buf = Vec::new();
+/// let row = vec!["1", "2", "3"];
+/// let mut writer = justcsv::CsvWriter::new(&mut buf);
+/// writer.write_row(&row).unwrap();
+/// writer.write_row(["4", "5\"abc\"X", "6\n\tagain"]).unwrap();
+/// assert_eq!(
+///     b"1,2,3\r\n4,\"5\"\"abc\"\"X\",\"6\n\tagain\"",
+///     buf.as_slice()
+/// );
 /// ```
 pub struct CsvWriter<W> {
     dest: W,

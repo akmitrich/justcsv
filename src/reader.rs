@@ -9,13 +9,17 @@ pub use config::Config as CsvReaderConfig;
 /// # Example
 ///
 /// ```
-/// let input = std::fs::File::open(path)?;
-/// let buf = std::io::BufReader::new(input);
-/// let reader = CsvReader::new(buf);
-/// for (line, record) in reader.enumerate() {
-///     let record = record?;
-///     println!("{:4}. {:?}", line, record);
-/// }
+/// let buf = "\"1\",2,3\r\n4, \"everybody needs\nmilk\",6".as_bytes();
+/// let mut reader = justcsv::CsvReader::new(buf);
+/// assert_eq!(
+///     vec!["1", "2", "3"],
+///     reader.next().unwrap().unwrap().into_vec()
+/// );
+/// assert_eq!(
+///     vec!["4", "everybody needs\nmilk", "6"],
+///     reader.next().unwrap().unwrap().into_vec()
+/// );
+/// assert!(reader.next().is_none());
 /// ```
 pub struct CsvReader<R> {
     source: R,
@@ -99,7 +103,7 @@ fn load_headers<R: BufRead>(source: R, comma: char, dquote: char) -> Option<Box<
 
 mod config {
 
-    /// Data structure with CSV reader options
+    /// Data struct with CSV reader options
     pub struct Config {
         /// User expects CSV headers
         pub has_headers: bool,
