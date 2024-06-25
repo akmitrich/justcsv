@@ -142,8 +142,5 @@ mod tests {
             b"1,2,3\r\n4,\"5\"\"abc\"\"X\",\"6\n\tagain\"",
             buf.as_slice()
         );
-        println!("CSV: {}", String::from_utf8(buf).unwrap());
     }
 }
-// println!("Line 1: {:?}", reader.next());
-// println!("Line 2: {:?}", reader.next());
