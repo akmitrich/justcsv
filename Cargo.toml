@@ -1,6 +1,6 @@
 [package]
 name = "justcsv"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 authors = ["Alexander Kalashnikov"]
 description = "Simple CSV-file reader/writer"
@@ -10,5 +10,5 @@ repository = "https://github.com/akmitrich/justcsv"
 readme = "README.md"
 
 [dependencies]
-derive_more = { version = "1.0.0-beta.6", features = ["from"] }
-nom = "7"
+derive_more = { version = "1.0.0", features = ["from"] }
+nom = "7.1.3"
