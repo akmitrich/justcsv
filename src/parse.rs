@@ -1,4 +1,4 @@
-use nom::{bytes::complete::tag, multi::separated_list1};
+use nom::{Parser, bytes::complete::tag, multi::separated_list1};
 
 pub type ParseResult<'a, T> = nom::IResult<&'a str, T>;
 
@@ -18,16 +18,17 @@ where
 
 fn escaped(comma: char, dquote: char) -> impl FnMut(&str) -> ParseResult<&str> {
     move |src| {
-        let rest = src.trim_start();
-        let (rest, _) = tag(format!("{}", dquote).as_str())(rest)?;
+        let trimmed = src.trim_start();
+        let (rest, _) = tag(format!("{}", dquote).as_str())(trimmed)?;
+        println!("Escaped: {:?}; trimmed={:?}; rest={:?}", src, trimmed, rest);
         let mut char_indices = rest.char_indices().peekable();
         while let Some((i, c)) = char_indices.next() {
             if c == dquote {
                 match char_indices.peek().copied() {
                     Some((j, c)) if c != dquote => {
                         let remainder = rest[j..].trim_start();
-                        let next_byte = remainder.as_bytes().first().copied();
-                        if remainder.starts_with(comma) || next_byte.unwrap_or_default() < 0x20 {
+                        let next_byte = remainder.as_bytes().first().copied().unwrap_or_default();
+                        if remainder.starts_with(comma) || next_byte < 0x20 {
                             return Ok((remainder, &rest[..i]));
                         } else {
                             return Err(nom::Err::Failure(nom::error::make_error(
@@ -47,16 +48,24 @@ fn escaped(comma: char, dquote: char) -> impl FnMut(&str) -> ParseResult<&str> {
     }
 }
 
-fn field<'a>(comma: char, dquote: char) -> impl FnMut(&'a str) -> ParseResult<String> {
+fn field<'a>(
+    comma: char,
+    dquote: char,
+) -> impl Parser<&'a str, Output = String, Error = nom::error::Error<&'a str>> {
     let stop = move |c| (c < ' ' || c == comma || c == dquote);
     nom::combinator::map(
         nom::branch::alt((escaped(comma, dquote), textdata(stop))),
-        |field| field.replace("\"\"", "\""),
+        move |field| {
+            field.replace(
+                format!("{}{}", dquote, dquote).as_str(),
+                format!("{}", dquote).as_str(),
+            )
+        },
     )
 }
 
 pub fn record(src: &str, comma: char, dquote: char) -> ParseResult<Vec<String>> {
-    separated_list1(tag(format!("{}", comma).as_str()), field(comma, dquote))(src)
+    separated_list1(tag(format!("{}", comma).as_str()), field(comma, dquote)).parse(src)
 }
 
 #[cfg(test)]
@@ -94,10 +103,20 @@ mod tests {
     fn fail_after_dquote() {
         let comma = ',';
         let dquote = '"';
+        println!("{:?}", record("мама,мыла, \"раму\"abc", comma, dquote));
         assert!(record("мама,мыла, \"раму\"abc", comma, dquote).is_err());
         assert_eq!(
             vec!["мама", "мыла", "раму"],
             record("мама,\"мыла\", \"раму\" ", comma, dquote).unwrap().1
+        );
+    }
+
+    #[test]
+    fn escaped_dquote() {
+        let line = "мама, \"мыла\n\"\"two times\"\"\"\t\t,раму";
+        assert_eq!(
+            vec!["мама", "мыла\n\"two times\"", "раму"],
+            record(line, ',', '"').unwrap().1
         );
     }
 }

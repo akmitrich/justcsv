@@ -51,7 +51,7 @@ impl<W: Write> CsvWriter<W> {
             .iter()
             .map(|field| self.escape_if_needed(field.as_ref()))
             .collect::<Vec<_>>()
-            .join(self.config.separator.to_string().as_str());
+            .join(self.config.separator.as_str());
         write!(self.dest, "{}", output)?;
         Ok(())
     }
